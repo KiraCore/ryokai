@@ -162,7 +162,6 @@ func TestValidatePort(t *testing.T) {
 			t.Errorf("Error checking <%s> is in valid range", num)
 		}
 	}
-
 	// checking non valid port range
 	invalidPorts := []string{"-1", "-5", "-2000", "-50434", "-portValidRange", "number", "334combined"}
 	for _, num := range invalidPorts {
