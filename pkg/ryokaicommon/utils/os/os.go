@@ -94,7 +94,7 @@ func IsDir(path string) bool {
 // If os.Stat returns nil error, the file exists, and the function returns true.
 // If the error is of type os.IsNotExist, indicating the file does not exist, it returns false.
 // For any other type of error, it also returns false, treating inaccessible files as non-existent.
-func PathExists(path string) bool {
+func FileExist(path string) bool {
 	_, err := os.Stat(path)
 
 	switch {
@@ -133,7 +133,6 @@ func ValidatePort(input string) bool {
 	if err != nil {
 		return false
 	}
-
 	return port >= 0 && port <= 65535
 }
 
@@ -171,7 +170,6 @@ func RunCommand(command string) ([]byte, error) {
 // Returns nil if the file is successfully created and the data is written without errors.
 func CreateFileWithData(filePath string, data []byte) error {
 	logrus.Printf("Creating <%s> file", filePath)
-
 	file, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
