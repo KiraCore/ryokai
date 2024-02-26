@@ -25,8 +25,9 @@ package toml
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
+
+	"github.com/KiraCore/ryokai/pkg/ryokaicommon/utils/base"
 )
 
 type (
@@ -62,14 +63,14 @@ func SetTomlVar(tomlValue Value, configStr string) (string, error) {
 
 	lines := strings.Split(configStr, "\n")
 
-	searchedLineIndex, err := searchNeededLine(tag, name, lines)
+	foundLineIndex, err := searchLine(tag, name, lines)
 	if err != nil {
 		return "", err
 	}
 
 	value = formatValue(value)
 
-	lines[searchedLineIndex] = fmt.Sprintf("%s = %s", name, value)
+	lines[foundLineIndex] = fmt.Sprintf("%s = %s", name, value)
 
 	return strings.Join(lines, "\n"), nil
 }
@@ -83,15 +84,15 @@ func formatTag(tag string) string {
 	return tag
 }
 
-// searchNeededLine searches for the line index within the TOML configuration string
+// searchLine searches for the line index within the TOML configuration string
 // where the specified variable (within a tag, if provided) can be updated.
-func searchNeededLine(tag, name string, lines []string) (int, error) {
+func searchLine(tag, name string, lines []string) (int, error) {
 	var (
 		tagFound    = tag == ""
 		withinScope = tag == ""
 	)
 
-	for indexOfLine, line := range lines {
+	for lineIndex, line := range lines {
 		trimmedCurrentLine := strings.TrimSpace(line)
 
 		if !tagFound && strings.Contains(trimmedCurrentLine, tag) {
@@ -102,7 +103,7 @@ func searchNeededLine(tag, name string, lines []string) (int, error) {
 		}
 
 		if withinScope && strings.HasPrefix(trimmedCurrentLine, name+" =") {
-			return indexOfLine, nil
+			return lineIndex, nil
 		}
 	}
 
@@ -120,25 +121,11 @@ func formatValue(value string) string {
 	case value == "" || strings.Contains(value, " "):
 		// If the value is empty or contains spaces, quote it
 		return fmt.Sprintf("\"%s\"", value)
-	case isBool(value) || isNumber(value):
+	case base.IsBool(value) || base.IsNumber(value):
 		// If the value is a boolean or a number, return as is
 		return value
 	default:
 		// Otherwise, wrap in quotes to ensure it's treated as a string
 		return fmt.Sprintf("\"%s\"", value)
 	}
-}
-
-// isBool checks if the given string is a boolean value ("true" or "false").
-func isBool(value string) bool {
-	_, err := strconv.ParseBool(value)
-
-	return err == nil
-}
-
-// isNumber checks if the given string is a numeric value.
-func isNumber(value string) bool {
-	_, err := strconv.ParseInt(value, 0, 64)
-
-	return err == nil
 }
