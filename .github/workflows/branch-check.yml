@@ -1,0 +1,12 @@
+name: "BRANCH NAME CONVENTION CHECK"
+on: [push]
+jobs:
+  check-branch-name:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check branch name
+      run: |
+        if [[ ! "$GITHUB_REF" =~ refs/heads/(feature|hotfix|bugfix)/.+ ]]; then
+          echo "Branch name does not follow the 'feature/*', 'hotfix/*', 'bugfix/*' naming convention."
+          exit 1
+        fi
