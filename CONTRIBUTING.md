@@ -8,7 +8,7 @@ Our project adheres to the GitFlow workflow to enhance development and release m
 - **feature/***: For maining new features or enhancements, e.g., `feature/add-login`.
 - **release/***: Manages pre-release activities and final testing, adhering to [Semantic Versioning (semver)](https://semver.org/ "Semantic Versioning 2.0.0").
 - **hotfix/***: Addresses critical issues in production, e.g., `hotfix/login-issue`.
-
+- **bugfix/***: Addresses minor issues in production like typo, non-critical errors etc.
 ### Workflow Overview
 
 #### Setting Up for Development
