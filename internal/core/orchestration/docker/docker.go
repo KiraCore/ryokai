@@ -8,7 +8,7 @@ import (
 type DockerOrchestrator struct {
 	containerConfig container.Config
 	hostConfigg     container.HostConfig
-	cli             *client.Client
+	Cli             *client.Client
 }
 
 func NewDockerOrchestrator() (*DockerOrchestrator, error) {
@@ -17,5 +17,5 @@ func NewDockerOrchestrator() (*DockerOrchestrator, error) {
 		return nil, err
 	}
 
-	return &DockerOrchestrator{cli: cli}, nil
+	return &DockerOrchestrator{Cli: cli}, nil
 }

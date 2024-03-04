@@ -4,19 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/KiraCore/ryokai/internal/core/orchestration/docker"
 	"github.com/KiraCore/ryokai/pkg/ryokaicommon/types/constants"
 	osutils "github.com/KiraCore/ryokai/pkg/ryokaicommon/utils/os"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/go-connections/nat"
+	"github.com/google/shlex"
 
 	vlg "github.com/PeepoFrog/validator-key-gen/MnemonicsGenerator"
 	"github.com/miekg/dns"
 )
 
 type SekaiPlugin struct {
-	dockerOrchestrator docker.DockerOrchestrator
+	dockerOrchestrator *docker.DockerOrchestrator
 	sekaidConfig       *SekaidConfig
 }
 
@@ -35,19 +40,19 @@ type SekaidConfig struct {
 	MnemonicDir         string                 // Destination where mnemonics file will be saved
 }
 
-func NewSekaiPlugin() (*SekaiPlugin, error) {
+func NewSekaiPlugin(ctx context.Context) (*SekaiPlugin, error) {
 	dockerOrchestrator, err := docker.NewDockerOrchestrator()
 	if err != nil {
 		return nil, err
 	}
 
-	return &SekaiPlugin{dockerOrchestrator: *dockerOrchestrator}, nil
+	return &SekaiPlugin{dockerOrchestrator: dockerOrchestrator}, nil
 }
 
 func (sekaiPlugin *SekaiPlugin) InitNewSekaid(ctx context.Context) error {
+	os.Exit(1)
 	// log := logging.Log
 	//  log.Infof("Setting up '%s' (sekaid) genesis container", sekaiPlugin.sekaidConfig.SekaidContainerName)
-
 	// Have to do this because need to initialize sekaid folder
 	initcmd := fmt.Sprintf(`sekaid init  --overwrite --chain-id=%s --home=%s "%s"`, sekaiPlugin.sekaidConfig.NetworkName, sekaiPlugin.sekaidConfig.SekaidHome, sekaiPlugin.sekaidConfig.Moniker)
 	//  log.Tracef("running %s\n", initcmd)
@@ -102,6 +107,72 @@ func (sekaiPlugin *SekaiPlugin) InitNewSekaid(ctx context.Context) error {
 	return nil
 }
 
+func (sekaiPlugin *SekaiPlugin) RunSekaidImageCommand(ctx context.Context, cmd string) error {
+	hostFolderPath := filepath.Join(os.Getenv("HOME"), "real-folder-path")
+	containerMountPath := "/volumes"
+
+	// Ensure the host folder exists
+	const dirPermissions = 0o755
+	if err := os.MkdirAll(hostFolderPath, dirPermissions); err != nil {
+		panic(fmt.Errorf("error when creating host folder: %w", err))
+	}
+
+	command, err := shlex.Split(cmd)
+	if err != nil {
+		return err
+	}
+
+	natRPCPort, err := nat.NewPort("tcp", sekaiPlugin.sekaidConfig.RpcPort)
+	if err != nil {
+		return err
+	}
+
+	natP2PPort, err := nat.NewPort("tcp", sekaiPlugin.sekaidConfig.P2PPort)
+	if err != nil {
+		return err
+	}
+
+	natPrometheusPort, err := nat.NewPort("tcp", sekaiPlugin.sekaidConfig.PrometheusPort)
+	if err != nil {
+		return err
+	}
+
+	containerConfig := &container.Config{
+		Image: "ghcr.io/mrlutik/sekin:sekai_v0.3.41",
+		Cmd:   command,
+		Tty:   true,
+		ExposedPorts: nat.PortSet{
+			natRPCPort:        struct{}{},
+			natP2PPort:        struct{}{},
+			natPrometheusPort: struct{}{},
+		},
+	}
+
+	hostConfig := &container.HostConfig{
+		AutoRemove: true,
+		Binds:      []string{hostFolderPath + ":" + containerMountPath},
+		PortBindings: nat.PortMap{
+			natRPCPort:        []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: sekaiPlugin.sekaidConfig.RpcPort}},
+			natP2PPort:        []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: sekaiPlugin.sekaidConfig.P2PPort}},
+			natPrometheusPort: []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: sekaiPlugin.sekaidConfig.PrometheusPort}},
+		},
+	}
+
+	resp, err := sekaiPlugin.dockerOrchestrator.Cli.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
+	if err != nil {
+		return err
+	}
+
+	if err := sekaiPlugin.dockerOrchestrator.Cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//	-
+//
+// -
 func (sekaiPlugin *SekaiPlugin) InitJoinSekaid(ctx context.Context) {
 	// sekaiPlugin.orhestrator.
 }

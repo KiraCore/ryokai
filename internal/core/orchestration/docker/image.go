@@ -11,7 +11,7 @@ import (
 
 func (dm *DockerOrchestrator) PullImage(ctx context.Context, imageName string) error {
 	options := types.ImagePullOptions{}
-	reader, err := dm.cli.ImagePull(ctx, imageName, options)
+	reader, err := dm.Cli.ImagePull(ctx, imageName, options)
 	if err != nil {
 		// log.Errorf("failed to pull image: %s", err)
 		return fmt.Errorf("failed to pull image: %w", err)

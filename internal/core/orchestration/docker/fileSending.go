@@ -54,7 +54,7 @@ func (dm *DockerOrchestrator) SendFileToContainer(ctx context.Context, filePathO
 		AllowOverwriteDirWithFile: false,
 	}
 
-	err = dm.cli.CopyToContainer(ctx, containerID, directoryPathOnContainer, tarReader, copyOptions)
+	err = dm.Cli.CopyToContainer(ctx, containerID, directoryPathOnContainer, tarReader, copyOptions)
 	if err != nil {
 		// log.Errorf("Copying tar to container error: %s", err)
 		return err
@@ -112,7 +112,7 @@ func (dm *DockerOrchestrator) WriteFileDataToContainer(ctx context.Context, file
 		return err
 	}
 
-	err := dm.cli.CopyToContainer(ctx, containerID, destPath, tarBuffer, types.CopyToContainerOptions{
+	err := dm.Cli.CopyToContainer(ctx, containerID, destPath, tarBuffer, types.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: true,
 	})
 	if err != nil {
@@ -131,7 +131,7 @@ func (dm *DockerOrchestrator) WriteFileDataToContainer(ctx context.Context, file
 func (dm *DockerOrchestrator) GetFileFromContainer(ctx context.Context, folderPathOnContainer, fileName, containerID string) ([]byte, error) {
 	// log.Infof("Getting file '%s' from container '%s'", fileName, folderPathOnContainer)
 
-	rc, _, err := dm.cli.CopyFromContainer(ctx, containerID, folderPathOnContainer+"/"+fileName)
+	rc, _, err := dm.Cli.CopyFromContainer(ctx, containerID, folderPathOnContainer+"/"+fileName)
 	if err != nil {
 		// log.Errorf("Copying from container error: %s", err)
 		return nil, err

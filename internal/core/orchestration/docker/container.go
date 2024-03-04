@@ -3,12 +3,13 @@ package docker
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log/slog"
 
 	ryokaiTypes "github.com/KiraCore/ryokai/pkg/ryokaicommon/types"
-
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/google/shlex"
 )
@@ -28,7 +29,7 @@ func (dm *DockerOrchestrator) ExecCommandInContainer(ctx context.Context, contai
 
 	slog.Info("Running command ", "command", command, "containerID", containerID)
 
-	execCreateResponse, err := dm.cli.ContainerExecCreate(ctx, containerID, types.ExecConfig{ //nolint:exhaustruct
+	execCreateResponse, err := dm.Cli.ContainerExecCreate(ctx, containerID, types.ExecConfig{ //nolint:exhaustruct
 		Cmd:          cmdArray,
 		AttachStdout: true,
 		AttachStderr: true,
@@ -39,7 +40,7 @@ func (dm *DockerOrchestrator) ExecCommandInContainer(ctx context.Context, contai
 		return nil, err
 	}
 
-	resp, err := dm.cli.ContainerExecAttach(ctx, execCreateResponse.ID, types.ExecStartCheck{})
+	resp, err := dm.Cli.ContainerExecAttach(ctx, execCreateResponse.ID, types.ExecStartCheck{})
 	if err != nil {
 		slog.Error("Error when executing command", "command", command, "error", err)
 
@@ -61,10 +62,19 @@ func (dm *DockerOrchestrator) ExecCommandInContainer(ctx context.Context, contai
 	return outBuf.Bytes(), nil
 }
 
+func (dm *DockerOrchestrator) CreateVolume(ctx context.Context, volumeCreateOption volume.CreateOptions) (volume.Volume, error) { //nolint:lll
+	vol, err := dm.Cli.VolumeCreate(ctx, volumeCreateOption)
+	if err != nil {
+		return volume.Volume{}, fmt.Errorf("error when creating volume %w", err)
+	}
+
+	return vol, nil
+}
+
 func (dm *DockerOrchestrator) CreateContainer(ctx context.Context, spec ryokaiTypes.ContainerSpec) (string, error) {
 	slog.Info("Creating")
 
-	resp, err := dm.cli.ContainerCreate(ctx, &container.Config{
+	resp, err := dm.Cli.ContainerCreate(ctx, &container.Config{
 		Image: spec.Image,
 		Env:   spec.Env,
 	}, nil, nil, nil, "")
@@ -76,7 +86,7 @@ func (dm *DockerOrchestrator) CreateContainer(ctx context.Context, spec ryokaiTy
 }
 
 func (dm *DockerOrchestrator) StartContainer(ctx context.Context, containerID string) error {
-	if err := dm.cli.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil { //nolint exhaustruct
+	if err := dm.Cli.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil { //nolint exhaustruct
 		return err
 	}
 
