@@ -135,24 +135,26 @@ func (dm *DockerOrchestrator) GetFileFromContainer(ctx context.Context, folderPa
 // Todo: this func has to be deprecated, use volume folder instead
 // readTarArchive reads a file from the TAR archive stream
 // and returns the file content as a byte slice.
-func readTarArchive(tr *tar.Reader, fileName string) ([]byte, error) {
+func readTarArchive(tarReader *tar.Reader, fileName string) ([]byte, error) {
 	for {
-		hdr, err := tr.Next()
+		hdr, err := tarReader.Next()
 		if err == io.EOF {
 			break
 		}
 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error when advancing to next tar archive entry: %w", err)
 		}
 
 		if hdr.Name == fileName {
-			b, err := io.ReadAll(tr)
+			b, err := io.ReadAll(tarReader) //nolint: govet
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("error when reading tar file, error: %w", err)
 			}
+
 			return b, nil
 		}
 	}
+
 	return nil, fmt.Errorf("%w: %s", ErrFileNotFoundInTarBase, fileName)
 }
