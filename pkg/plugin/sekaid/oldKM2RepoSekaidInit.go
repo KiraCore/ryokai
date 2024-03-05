@@ -18,9 +18,20 @@ import (
 	"github.com/miekg/dns"
 )
 
-//	-
-//
-// -
+type SekaidConfig struct {
+	MasterMnemonicSet   *vlg.MasterMnemonicSet `toml:"-"`
+	SecretsFolder       string                 // Path to mnemonics.env and node keys
+	Moniker             string                 // Moniker
+	SekaidHome          string                 // Home folder for sekai bin
+	NetworkName         string                 // Name of a blockchain name (chain-ID)
+	SekaidContainerName string                 // Name for sekai container
+	KeyringBackend      string                 // Name of keyring backend
+	RpcPort             string                 // Sekaid's rpc port
+	GrpcPort            string                 // Sekaid's grpc port
+	P2PPort             string                 // Sekaid's p2p port
+	PrometheusPort      string                 // Prometheus port
+	MnemonicDir         string                 // Destination where mnemonics file will be saved
+}
 
 func (sekaiPlugin *SekaiPlugin) InitNewSekaid(ctx context.Context) error {
 	os.Exit(1)
