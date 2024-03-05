@@ -19,12 +19,12 @@ import (
 // containerID: The ID or name of the container.
 // command: The command to execute inside the container.
 // Returns the output of the command as a byte slice and an error if any issue occurs during the command execution.
-func (dm *DockerOrchestrator) ExecCommandInContainer(ctx context.Context, containerID, command string) ([]byte, error) { //nolint funlen
+func (dm *DockerOrchestrator) ExecCommandInContainer(ctx context.Context, containerID, command string) ([]byte, error) { //nolint: lll, funlen
 	cmdArray, err := shlex.Split(command)
 	if err != nil {
 		slog.Error("Error when splitting command string", "error", err)
 
-		return nil, err
+		return nil, fmt.Errorf("splitting command error: %w", err)
 	}
 
 	slog.Info("Running command ", "command", command, "containerID", containerID)
@@ -37,14 +37,14 @@ func (dm *DockerOrchestrator) ExecCommandInContainer(ctx context.Context, contai
 	if err != nil {
 		slog.Error("Exec configuration error: %s", err)
 
-		return nil, err
+		return nil, fmt.Errorf("container exec create error: %w", err)
 	}
 
-	resp, err := dm.Cli.ContainerExecAttach(ctx, execCreateResponse.ID, types.ExecStartCheck{})
+	resp, err := dm.Cli.ContainerExecAttach(ctx, execCreateResponse.ID, types.ExecStartCheck{}) //nolint: exhaustruct
 	if err != nil {
 		slog.Error("Error when executing command", "command", command, "error", err)
 
-		return nil, err
+		return nil, fmt.Errorf("container exec attach error: %w", err)
 	}
 	defer resp.Close()
 
@@ -74,20 +74,20 @@ func (dm *DockerOrchestrator) CreateVolume(ctx context.Context, volumeCreateOpti
 func (dm *DockerOrchestrator) CreateContainer(ctx context.Context, spec ryokaiTypes.ContainerSpec) (string, error) {
 	slog.Info("Creating")
 
-	resp, err := dm.Cli.ContainerCreate(ctx, &container.Config{
+	resp, err := dm.Cli.ContainerCreate(ctx, &container.Config{ //nolint:exhaustruct
 		Image: spec.Image,
 		Env:   spec.Env,
 	}, nil, nil, nil, "")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("creating container error: %w", err)
 	}
 
 	return resp.ID, nil
 }
 
 func (dm *DockerOrchestrator) StartContainer(ctx context.Context, containerID string) error {
-	if err := dm.Cli.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil { //nolint exhaustruct
-		return err
+	if err := dm.Cli.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil { //nolint: exhaustruct
+		return fmt.Errorf("starting container error: %w", err)
 	}
 
 	return nil

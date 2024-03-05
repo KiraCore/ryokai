@@ -12,24 +12,27 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
+var (
+	ErrPackageInstallationFailed = errors.New("package installation failed")
+	ErrFileNotFoundInTarBase     = errors.New("file not found in tar archive")
+	ErrStderrNotEmpty            = errors.New("stderr is not empty")
+)
+
 // SendFileToContainer sends a file from the host machine to a specified directory inside a Docker container.
 // - ctx: The context for the operation.
 // - filePathOnHostMachine: The path of the file on the host machine.
 // - directoryPathOnContainer: The path of the directory inside the container where the file will be copied.
 // - containerID: The ID or name of the Docker container.
 // Returns an error if any issue occurs during the file sending process.
-func (dm *DockerOrchestrator) SendFileToContainer(ctx context.Context, filePathOnHostMachine, directoryPathOnContainer, containerID string) error {
-	// log.Infof("Sending file '%s' to container '%s' to '%s'", filePathOnHostMachine, containerID, directoryPathOnContainer)
+func (dm *DockerOrchestrator) SendFileToContainer(ctx context.Context, filePathOnHostMachine, directoryPathOnContainer, containerID string) error { //nolint:lll,funlen
 	file, err := os.Open(filePathOnHostMachine)
 	if err != nil {
-		// log.Errorf("Opening file error: %s", err)
 		return err
 	}
 	defer file.Close()
 
 	fileInfo, err := file.Stat()
 	if err != nil {
-		// log.Errorf("Can't open file stat: %s", err)
 		return err
 	}
 
@@ -38,35 +41,29 @@ func (dm *DockerOrchestrator) SendFileToContainer(ctx context.Context, filePathO
 
 	err = addFileToTar(fileInfo, file, tarWriter)
 	if err != nil {
-		// log.Errorf("Adding file to tar error: %s", err)
 		return err
 	}
 
 	err = tarWriter.Close()
 	if err != nil {
-		// log.Errorf("Closing tar error: %s", err)
 		return err
 	}
 
 	tarContent := buf.Bytes()
 	tarReader := bytes.NewReader(tarContent)
-	copyOptions := types.CopyToContainerOptions{
+	copyOptions := types.CopyToContainerOptions{ //nolint:exhaustruct
 		AllowOverwriteDirWithFile: false,
 	}
 
 	err = dm.Cli.CopyToContainer(ctx, containerID, directoryPathOnContainer, tarReader, copyOptions)
 	if err != nil {
-		// log.Errorf("Copying tar to container error: %s", err)
 		return err
 	}
 
-	// log.Infof("Successfully copied '%s' to '%s' in '%s' container", filePathOnHostMachine, directoryPathOnContainer, containerID)
 	return nil
 }
 
 func addFileToTar(fileInfo os.FileInfo, file io.Reader, tarWriter *tar.Writer) error {
-	// log.Infof("Writing file '%s' to tar archive", fileInfo.Name())
-
 	header := &tar.Header{
 		Name: fileInfo.Name(),
 		Mode: int64(fileInfo.Mode()),
@@ -74,41 +71,34 @@ func addFileToTar(fileInfo os.FileInfo, file io.Reader, tarWriter *tar.Writer) e
 	}
 
 	if err := tarWriter.WriteHeader(header); err != nil {
-		// log.Errorf("Writing tar header error: %s", err)
 		return err
 	}
 
 	if _, err := io.Copy(tarWriter, file); err != nil {
-		// log.Errorf("Copying error: %s", err)
 		return err
 	}
 
 	return nil
 }
 
-func (dm *DockerOrchestrator) WriteFileDataToContainer(ctx context.Context, fileData []byte, fileName, destPath, containerID string) error {
-	// log.Infof("Writing file to container '%s'", containerID)
-
+func (dm *DockerOrchestrator) WriteFileDataToContainer(ctx context.Context, fileData []byte, fileName, destPath, containerID string) error { //nolint:lll
 	tarBuffer := new(bytes.Buffer)
-	tw := tar.NewWriter(tarBuffer)
+	tarWriter := tar.NewWriter(tarBuffer)
 
 	header := &tar.Header{
 		Name: fileName,
 		Mode: 0o644,
 		Size: int64(len(fileData)),
 	}
-	if err := tw.WriteHeader(header); err != nil {
-		// log.Errorf("Writing tar header error: %s", err)
+	if err := tarWriter.WriteHeader(header); err != nil {
 		return err
 	}
 
-	if _, err := tw.Write(fileData); err != nil {
-		// log.Errorf("Writing file data to tar error: %s", err)
+	if _, err := tarWriter.Write(fileData); err != nil {
 		return err
 	}
 
-	if err := tw.Close(); err != nil {
-		// log.Errorf("Closing tar writer error: %s", err)
+	if err := tarWriter.Close(); err != nil {
 		return err
 	}
 
@@ -116,11 +106,8 @@ func (dm *DockerOrchestrator) WriteFileDataToContainer(ctx context.Context, file
 		AllowOverwriteDirWithFile: true,
 	})
 	if err != nil {
-		// log.Errorf("Failed to copy file to container '%s': %s", containerID, err)
 		return err
 	}
-
-	// log.Infof("File '%s' is successfully written on '%s' in container '%s'", fileName, destPath, containerID)
 
 	return nil
 }
@@ -128,26 +115,24 @@ func (dm *DockerOrchestrator) WriteFileDataToContainer(ctx context.Context, file
 // GetFileFromContainer retrieves a file from a specified container using the Docker API.
 // It copies the TAR archive with file from the specified folder path in the container,
 // read file from TAR archive and returns the file content as a byte slice.
-func (dm *DockerOrchestrator) GetFileFromContainer(ctx context.Context, folderPathOnContainer, fileName, containerID string) ([]byte, error) {
-	// log.Infof("Getting file '%s' from container '%s'", fileName, folderPathOnContainer)
-
-	rc, _, err := dm.Cli.CopyFromContainer(ctx, containerID, folderPathOnContainer+"/"+fileName)
+func (dm *DockerOrchestrator) GetFileFromContainer(ctx context.Context, folderPathOnContainer, fileName, containerID string) ([]byte, error) { //nolint:lll
+	readCloser, _, err := dm.Cli.CopyFromContainer(ctx, containerID, folderPathOnContainer+"/"+fileName)
 	if err != nil {
-		// log.Errorf("Copying from container error: %s", err)
-		return nil, err
+		return nil, (fmt.Errorf("error when copying from container, error: %w", err))
 	}
-	defer rc.Close()
+	defer readCloser.Close()
 
-	tr := tar.NewReader(rc)
-	b, err := readTarArchive(tr, fileName)
+	tr := tar.NewReader(readCloser)
+
+	outBytes, err := readTarArchive(tr, fileName)
 	if err != nil {
-		// log.Errorf("Reading Tar archive error: %s", err)
 		return nil, err
 	}
 
-	return b, nil
+	return outBytes, nil
 }
 
+// Todo: this func has to be deprecated, use volume folder instead
 // readTarArchive reads a file from the TAR archive stream
 // and returns the file content as a byte slice.
 func readTarArchive(tr *tar.Reader, fileName string) ([]byte, error) {
@@ -156,9 +141,11 @@ func readTarArchive(tr *tar.Reader, fileName string) ([]byte, error) {
 		if err == io.EOF {
 			break
 		}
+
 		if err != nil {
 			return nil, err
 		}
+
 		if hdr.Name == fileName {
 			b, err := io.ReadAll(tr)
 			if err != nil {
@@ -169,9 +156,3 @@ func readTarArchive(tr *tar.Reader, fileName string) ([]byte, error) {
 	}
 	return nil, fmt.Errorf("%w: %s", ErrFileNotFoundInTarBase, fileName)
 }
-
-var (
-	ErrPackageInstallationFailed = errors.New("package installation failed")
-	ErrFileNotFoundInTarBase     = errors.New("file not found in tar archive")
-	ErrStderrNotEmpty            = errors.New("stderr is not empty")
-)
