@@ -26,7 +26,7 @@ func NewSekaiPlugin(ctx context.Context) (*SekaiPlugin, error) {
 	return &SekaiPlugin{dockerOrchestrator: dockerOrchestrator}, nil
 }
 
-func (sekaiPlugin *SekaiPlugin) RunSekaidImageCommand(ctx context.Context, cmd string) error {
+func (sekaiPlugin *SekaiPlugin) Execute(ctx context.Context, cmd string) error { //nolint:funlen
 	hostFolderPath := filepath.Join(os.Getenv("HOME"), "real-folder-path")
 	containerMountPath := "/volumes"
 
@@ -86,5 +86,9 @@ func (sekaiPlugin *SekaiPlugin) RunSekaidImageCommand(ctx context.Context, cmd s
 		return err
 	}
 
+	return nil
+}
+
+func (sekaidPlugin *SekaiPlugin) Initialize(dockerOrchestrator docker.DockerOrchestrator) error {
 	return nil
 }

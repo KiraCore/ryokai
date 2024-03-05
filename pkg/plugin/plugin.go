@@ -2,41 +2,47 @@ package plugin
 
 import (
 	"context"
-	"log"
+	"fmt"
 
 	"github.com/KiraCore/ryokai/internal/core/orchestration"
 )
 
-type Plugin interface {
-	Initialize(orchestrator orchestration.Orchestrator) error
-	Execute(ctx context.Context) error
-	Cleanup(ctx context.Context) error
-}
-
-type PluginRegistry struct {
-	plugins map[string]Plugin
-}
+type (
+	Plugin interface {
+		Initialize(ctx context.Context, orchestrator orchestration.Orchestrator) error
+		Execute(ctx context.Context, orchestrator orchestration.Orchestrator) error
+		Cleanup(ctx context.Context, orchestrator orchestration.Orchestrator) error
+	}
+	PluginRegistry struct {
+		Plugins map[string]Plugin
+	}
+)
 
 func NewPluginRegistry() *PluginRegistry {
+	// TODO: read from file?
 	return &PluginRegistry{
-		plugins: make(map[string]Plugin),
+		Plugins: make(map[string]Plugin),
 	}
 }
 
 func (r *PluginRegistry) RegisterPlugin(name string, plugin Plugin) {
-	r.plugins[name] = plugin
+	r.Plugins[name] = plugin
 }
 
 func (r *PluginRegistry) GetPlugin(name string) (Plugin, bool) {
-	plugin, exists := r.plugins[name]
+	// TODO: From where we will get plugins? Read from state file?
+	plugin, exists := r.Plugins[name]
+
 	return plugin, exists
 }
 
-func initializePlugins(orchestrator orchestration.Orchestrator, registry *PluginRegistry) {
-	for name, plugin := range registry.plugins {
-		err := plugin.Initialize(orchestrator)
+func initializePlugins(ctx context.Context, orchestrator orchestration.Orchestrator, registry *PluginRegistry) error {
+	for name, plugin := range registry.Plugins {
+		err := plugin.Initialize(ctx, orchestrator)
 		if err != nil {
-			log.Printf("Failed to initialize plugin %s: %v", name, err)
+			return fmt.Errorf("error when initializing <%s> plugin: %w", name, err)
 		}
 	}
+
+	return nil
 }
