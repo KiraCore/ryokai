@@ -2,9 +2,14 @@
 
 ## Intro
 
-`Ryokai` is the **new infrastructure manager tool** from [KiraCore team](https://github.com/KiraCore/).
+`Ryokai` is the **new orchestrator tool** from [KiraCore team](https://github.com/KiraCore/).
 
-> `RYOKAI` supports network operations by automating on-chain and off-chain upgrades, scaling, RollApp deployment, simplifying consensus nodes' management tasks, and enhancing the network's efficiency and security. In other words, `RYOKAI` is an all-in-one DevOps tool that turns any network participant into an infrastructure expert without the need for years of experience.
+> `RYOKAI` 了解 (りょかい), previously known as KIRA Manager, is KIRA’s orchestration tool, a physical infrastructure manager
+> that facilitates backend operations of KIRA stack components for Consensus nodes. It automates critical processes
+> such as [`KiraCore/sekai`](https://github.com/KiraCore/sekai) system upgrades, auto-deployment of containerized Layer 2 applications,
+> and [`KiraCore/interx`](https://github.com/KiraCore/interx) configuration.
+> The integration with [`hashicorp/vault`](https://github.com/hashicorp/vault) enhances `RYOKAI`'s capabilities,
+> providing robust security features for secrets management and access control.
 
 Check out the documentation:  
 <https://docs.kira.network/learn/2ac3bfb7-478c-4207-a290-051d9fa6124f/>
@@ -20,7 +25,6 @@ Check out the documentation:
     - [Prerequisites](#prerequisites)
     - [Installation](#installation)
   - [Usage](#usage)
-  - [Roadmap](#roadmap)
   - [Contributing](#contributing)
   - [FAQs](#faqs)
 
@@ -39,10 +43,6 @@ Check out the documentation:
 ## Usage
 
 **TODO:** Detailed examples of how to use the project, including code snippets and command line instructions.
-
-## Roadmap
-
-**TODO:** An overview of the planned features and direction of the project.
 
 ## Contributing
 
